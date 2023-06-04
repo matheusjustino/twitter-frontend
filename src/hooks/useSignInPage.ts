@@ -34,7 +34,7 @@ const useSignInPage = () => {
 			if (ok) {
 				toast.success("Login successful");
 				setTimeout(() => {
-					window.location.replace("http://localhost:3000/");
+					window.location.replace(process.env.NEXTAUTH_URL as string);
 				}, 750);
 			} else {
 				toast.error(JSON.parse(error).error);
