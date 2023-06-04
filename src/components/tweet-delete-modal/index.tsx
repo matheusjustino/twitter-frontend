@@ -1,0 +1,114 @@
+import { Session } from "next-auth";
+import { useMutation, useQueryClient } from "react-query";
+
+// SERVICES
+import { api } from "@/services/api";
+
+// INTERFACES
+import { PostInterface } from "@/interfaces/post.interface";
+import { toast } from "react-hot-toast";
+
+async function deletePost({ postId }: { postId: string }) {
+	return await api
+		.delete<PostInterface>(`/posts/${postId}`)
+		.then((res) => res.data);
+}
+
+interface TweetDeleteModalProps {
+	open: boolean;
+	onClose: () => void;
+	post?: PostInterface;
+	session: Session | null;
+}
+
+const TweetDeleteModal: React.FC<TweetDeleteModalProps> = ({
+	open = false,
+	onClose,
+	post,
+	session,
+}) => {
+	const queryClient = useQueryClient();
+	const mutation = useMutation([`delete-post-${post?._id}`], deletePost, {
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["list-posts"],
+				exact: true,
+			});
+		},
+	});
+
+	const handleDelete = async () => {
+		try {
+			await mutation.mutateAsync({ postId: post?._id ?? "" });
+			onClose();
+		} catch (error: any) {
+			console.error(error);
+			console.error(error);
+			const errorMsg = error.response?.data?.error || error.message;
+			toast.error(errorMsg);
+		}
+	};
+
+	const isAuthenticated = !!session;
+	const canDeleteTweet =
+		isAuthenticated && post && session?.user.id === post?.postedBy._id;
+
+	return (
+		<div
+			className={`fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm ${
+				open ? "flex" : "hidden"
+			} justify-center items-center px-2 z-50`}
+		>
+			<div
+				className={`bg-white rounded w-full md:w-2/3 xl:w-1/3 animate-[fade-in-down_0.4s_ease-in-out]`}
+			>
+				{/** header */}
+				<div className="border-b px-4 py-2 font-semibold text-xl">
+					Delete the post?
+				</div>
+
+				{/** post content */}
+				{!canDeleteTweet && (
+					<div className="py-6 px-4">
+						{`You won't be able to delete this.`}
+					</div>
+				)}
+
+				{canDeleteTweet && (
+					<div className="py-6 px-4">{`Are you sure?`}</div>
+				)}
+
+				{/** footer */}
+				<div className="flex justify-end items-center w-100 border-t p-3 gap-1">
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							onClose();
+						}}
+						className="bg-gray-500 hover:bg-gray-600 px-3 py-1
+							rounded text-white min-w-[80px] transition-colors duration-200"
+					>
+						Cancel
+					</button>
+
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleDelete();
+						}}
+						disabled={!canDeleteTweet}
+						className="bg-red-500 hover:bg-red-600 px-3 py-1
+							rounded text-white min-w-[80px] disabled:bg-red-300
+							disabled:cursor-not-allowed transition-colors duration-200"
+					>
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export { TweetDeleteModal };

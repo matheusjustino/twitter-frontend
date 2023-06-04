@@ -10,6 +10,7 @@ export interface PostInterface {
 	likes: UserInterface[];
 	retweetUsers: UserInterface[];
 	retweetData?: PostInterface;
+	replyTo?: PostInterface;
 	createdAt: Date;
 	updatedAt: Date;
 }

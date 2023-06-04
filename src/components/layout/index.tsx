@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
 	return (
 		<>
-			<div className="container mx-auto flex items-start sm:pr-4">
+			<div className="sm:container sm:mx-auto flex items-start sm:pr-4">
 				{!isAuthPage && <Sidenav />}
 				<div className="min-h-screen flex-grow border-x">
 					{children}

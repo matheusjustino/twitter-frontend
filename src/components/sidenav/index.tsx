@@ -65,7 +65,7 @@ const Sidenav = memo(() => {
 				},
 			},
 			{
-				href: `/profiles/${user?.id}`,
+				href: `/profiles/${user?.username}`,
 				icon: BsPersonFill,
 				disabled: !user,
 				iconClasses: {

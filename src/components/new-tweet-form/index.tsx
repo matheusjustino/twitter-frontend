@@ -6,7 +6,7 @@ import {
 	useEffect,
 } from "react";
 import { Session } from "next-auth";
-import { useMutation, QueryClient, useQueryClient } from "react-query";
+import { useMutation, useQueryClient } from "react-query";
 import { toast } from "react-hot-toast";
 
 // SERVICES

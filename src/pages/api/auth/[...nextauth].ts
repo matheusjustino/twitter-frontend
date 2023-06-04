@@ -1,3 +1,4 @@
+import type { NextApiRequest, NextApiResponse } from "next";
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import jwtDecode from "jwt-decode";
@@ -32,6 +33,7 @@ const authOptions: NextAuthOptions = {
 			return session;
 		},
 	},
+	secret: process.env.NEXT_PUBLIC_NEXTAUTH_SECRET,
 	providers: [
 		CredentialsProvider({
 			type: "credentials",
@@ -51,7 +53,7 @@ const authOptions: NextAuthOptions = {
 
 					const user = jwtDecode<UserTokenInterface>(token);
 					user.token = token;
-					return user;
+					return Promise.resolve(user);
 				} catch (error: any) {
 					console.error(error);
 					const errorMsg =
@@ -69,4 +71,5 @@ const authOptions: NextAuthOptions = {
 	],
 };
 
-export default NextAuth(authOptions);
+export default (req: NextApiRequest, res: NextApiResponse) =>
+	NextAuth(req, res, authOptions);
