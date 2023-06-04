@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-}
+const isProd = process.env.NODE_ENV === "production";
+/* eslint-disable @typescript-eslint/no-var-requires */
+const withPWA = require("next-pwa")({
+	dest: "public",
+	disable: !isProd,
+});
 
-module.exports = nextConfig
+const nextConfig = {
+	images: {
+		domains: [],
+	},
+};
+
+module.exports = withPWA(nextConfig);
