@@ -29,8 +29,8 @@ const HomePage: NextPage<HomePageProps> = ({ session }) => {
 	const { posts, setData } = usePost();
 
 	const query = useQuery(["list-posts"], async () => await listPosts(), {
-		staleTime: 1000 * 60 * 3,
-		cacheTime: 1000 * 60 * 3,
+		// staleTime: 1000 * 60 * 3,
+		// cacheTime: 1000 * 60 * 3,
 		refetchOnMount: false,
 		refetchOnWindowFocus: false,
 	});

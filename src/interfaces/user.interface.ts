@@ -9,6 +9,8 @@ export interface UserInterface {
 	profilePic?: string;
 	likes: PostInterface[];
 	retweets: PostInterface[];
+	following: UserInterface[];
+	followers: UserInterface[];
 	cratedAt?: Date;
 	updatedAt?: Date;
 }

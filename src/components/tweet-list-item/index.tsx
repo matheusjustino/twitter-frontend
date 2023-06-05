@@ -46,6 +46,7 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 	const [isDeleteTweetModalOpen, setIsDeleteTweetModalOpen] = useState(false);
 
 	const navigateTo = (event: any, href: string) => {
+		// avoid Link click propagation to div with onClick event
 		if (event.target.tagName.toLowerCase() !== "a") {
 			event.preventDefault();
 			event.stopPropagation();
@@ -96,14 +97,16 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 									</span>
 								</div>
 
-								<AiOutlineClose
-									onClick={(e) => {
-										e.stopPropagation();
-										setIsDeleteTweetModalOpen(true);
-									}}
-									className="hover:text-white hover:bg-red-400 p-1 rounded-full"
-									size={26}
-								/>
+								{data?.user.id === post.postedBy._id && (
+									<AiOutlineClose
+										onClick={(e) => {
+											e.stopPropagation();
+											setIsDeleteTweetModalOpen(true);
+										}}
+										className="hover:text-white hover:bg-red-400 p-1 rounded-full"
+										size={26}
+									/>
+								)}
 							</div>
 
 							{/** reply to */}
