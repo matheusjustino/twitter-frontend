@@ -36,8 +36,6 @@ const PostPage: NextPage<postPageProps> = ({ id, session }) => {
 		[`get-post-${id}`],
 		async () => await fetchPostById<PostByIdResponseInterface>(id),
 		{
-			staleTime: 1000 * 60 * 3,
-			cacheTime: 1000 * 60 * 3,
 			refetchOnMount: false,
 			refetchOnWindowFocus: false,
 		}

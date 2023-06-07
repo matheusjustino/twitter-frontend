@@ -6,6 +6,9 @@ import { toast } from "react-hot-toast";
 // SERVICES
 import { api } from "@/services/api";
 
+// CONTEXTS
+import { useTweet } from "@/contexts/use-tweet.context";
+
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
 
@@ -54,28 +57,22 @@ interface TweetsListProps {
 
 const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 	const { data } = useSession();
+	const { tweets } = useTweet();
 	const [postToReply, setPostToReply] = useState<PostInterface>();
 
 	const queryClient = useQueryClient();
 	const likeTweetMutation = useMutation(["like-tweet"], handleLikeTweet, {
 		onSuccess: (data) => {
-			queryClient.setQueryData<PostInterface[] | undefined>(
-				["list-posts"],
-				(oldData) => {
-					if (!oldData || !data) return oldData;
-
-					const oldPostId = oldData.findIndex(
-						(v: PostInterface) => v._id === data._id
-					);
-					oldData[oldPostId].likes = data.likes;
-					return oldData;
-				}
-			);
+			if (data && tweets) {
+				const oldTweetId = tweets.findIndex(
+					(v: PostInterface) => v._id === data._id
+				);
+				tweets[oldTweetId].likes = data.likes;
+			}
 		},
 	});
 	const retweetMutation = useMutation(["retweet"], handleRetweet, {
-		onSuccess: async (data) => {
-			// console.log({ retweetMutation: data });
+		onSuccess: async () => {
 			await queryClient.invalidateQueries({
 				queryKey: ["list-posts"],
 				exact: true,
@@ -86,20 +83,21 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 	return (
 		<>
 			{posts?.map((post, index) => {
-				const postedBy = post.postedBy;
+				// const postedBy = post.postedBy;
 				const isLiked = post.likes.some(
 					(u) => (u as unknown as string) === data?.user.id
 				);
 				const hasRetweets = !!post.retweetUsers.length;
-				const isRetweet = !!post?.retweetData;
+				const isRetweet = !!post?.retweetData?._id;
 				const retweetedBy = isRetweet ? post.postedBy.username : null;
 				post = isRetweet ? post.retweetData! : post;
 
 				return (
 					<TweetListItem
 						key={`${post._id ?? post.id}${index + 1}`}
+						hasControls
 						post={post}
-						postedBy={postedBy}
+						postedBy={post.postedBy}
 						isLiked={isLiked}
 						isRetweet={isRetweet}
 						hasRetweets={hasRetweets}

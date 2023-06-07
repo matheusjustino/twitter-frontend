@@ -4,8 +4,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FaRetweet } from "react-icons/fa";
 import { AiOutlineClose } from "react-icons/ai";
-import { AiOutlineHeart } from "react-icons/ai";
-import { HiOutlineChatBubbleOvalLeft } from "react-icons/hi2";
 
 // UTILS
 import { calculateTimeDifference } from "@/utils/datetime-relative";
@@ -17,8 +15,10 @@ import { UserInterface } from "@/interfaces/user.interface";
 // COMPONENTS
 import { ProfileImage } from "../profile-image";
 import { TweetDeleteModal } from "../tweet-delete-modal";
+import { TweetListItemFooter } from "../tweet-list-item-footer";
 
 interface TweetListItemProps {
+	hasControls?: boolean;
 	post: PostInterface;
 	postedBy: UserInterface;
 	isLiked?: boolean;
@@ -31,6 +31,7 @@ interface TweetListItemProps {
 }
 
 const TweetListItem: React.FC<TweetListItemProps> = ({
+	hasControls = false,
 	post,
 	postedBy,
 	isRetweet = false,
@@ -110,7 +111,7 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 							</div>
 
 							{/** reply to */}
-							{post?.replyTo && (
+							{post?.replyTo?._id && (
 								<div className="mb-1">
 									Replying to{" "}
 									<Link
@@ -132,65 +133,23 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 						</div>
 
 						{/** post footer */}
-						<div className="flex items-center w-full">
-							<div className="flex-1">
-								<button
-									onClick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										!!handleReplayPost &&
-											handleReplayPost();
-									}}
-									className="flex items-center justify-center gap-1 p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-blue-200"
-								>
-									<HiOutlineChatBubbleOvalLeft className="h-5 w-5 sm:h-8 sm:w-8" />
-								</button>
-							</div>
-
-							<div className="flex-1">
-								<button
-									onClick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										!!handleRetweet && handleRetweet();
-									}}
-									className={`
-												flex items-center justify-center gap-1 p-1 rounded-full hover:bg-emerald-200
-													${
-														hasRetweets
-															? "text-emerald-500 hover:text-emerald-700"
-															: "text-gray-500 hover:text-gray-700"
-													}`}
-								>
-									<FaRetweet className="h-5 w-5 sm:h-8 sm:w-8" />
-									{post.retweetUsers.length > 0 && (
-										<span>{post.retweetUsers.length}</span>
-									)}
-								</button>
-							</div>
-
-							<div className="flex-1">
-								<button
-									onClick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										!!handleLikeTweet && handleLikeTweet();
-									}}
-									className={`
-													flex items-center justify-center gap-1 p-1 rounded-full
-													hover:bg-red-200 ${
-														isLiked
-															? "text-red-500 hover:text-red-700"
-															: "text-gray-500 hover:text-gray-700"
-													}`}
-								>
-									<AiOutlineHeart className="h-5 w-5 sm:h-8 sm:w-8" />
-									{post.likes.length > 0 && (
-										<span>{post.likes.length}</span>
-									)}
-								</button>
-							</div>
-						</div>
+						{hasControls && (
+							<TweetListItemFooter
+								hasRetweets={hasRetweets}
+								isLiked={isLiked}
+								totalLikes={post.likes.length}
+								totalRetweets={post.retweetUsers.length}
+								handleReply={() => {
+									handleReplayPost && handleReplayPost();
+								}}
+								handleRetweet={() => {
+									handleRetweet && handleRetweet();
+								}}
+								handleLike={() => {
+									handleLikeTweet && handleLikeTweet();
+								}}
+							/>
+						)}
 					</div>
 				</div>
 			</div>

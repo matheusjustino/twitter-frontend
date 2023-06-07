@@ -22,6 +22,7 @@ import { UserInterface } from "@/interfaces/user.interface";
 import { ProfileImage } from "@/components/profile-image";
 import { PostInterface } from "@/interfaces/post.interface";
 import { TweetsList } from "@/components/tweets-list";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 async function fetchUserByUsername(username: string) {
 	return await api
@@ -47,7 +48,7 @@ interface ProfilesPageProps {
 }
 
 const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
-	const { data } = useSession();
+	const { data, status } = useSession();
 	const [selectedTab, setSelectedTab] =
 		useState<(typeof TABS)[number]>("Posts");
 
@@ -139,10 +140,21 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 
 	const activeTabCss = `text-blue-400 border-b-4 border-blue-400`;
 
+	if (status === "loading") {
+		return (
+			<div className="flex flex-col gap-4 items-center justify-center h-screen">
+				<LoadingSpinner />
+				<h1 className="font-bold">Loading page...</h1>
+			</div>
+		);
+	}
+
 	return (
 		<>
 			<header className="sticky px-2 py-4 border-b-2 font-semibold bg-white">
-				<h1 className="text-xl font-bold">{data?.user.username}</h1>
+				<h1 className="text-xl font-bold">
+					{userProfileQuery.data.username}
+				</h1>
 			</header>
 
 			{/** profile header container */}

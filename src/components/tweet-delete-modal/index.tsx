@@ -1,12 +1,13 @@
 import { Session } from "next-auth";
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation } from "react-query";
+import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
 
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
-import { toast } from "react-hot-toast";
+import { useTweet } from "@/contexts/use-tweet.context";
 
 async function deletePost({ postId }: { postId: string }) {
 	return await api
@@ -27,13 +28,10 @@ const TweetDeleteModal: React.FC<TweetDeleteModalProps> = ({
 	post,
 	session,
 }) => {
-	const queryClient = useQueryClient();
+	const { tweets, setTweets } = useTweet();
 	const mutation = useMutation([`delete-post-${post?._id}`], deletePost, {
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["list-posts"],
-				exact: true,
-			});
+			setTweets(tweets?.filter((t) => t._id !== post?._id));
 		},
 	});
 
