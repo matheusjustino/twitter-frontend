@@ -14,6 +14,7 @@ import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
+import { revalidateApi } from "@/services/revalidate-api";
 
 // INTERFACES
 import { UserInterface } from "@/interfaces/user.interface";
@@ -103,6 +104,13 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 					queryKey: [`get-user-${username}`],
 					exact: true,
 				});
+				const revalidateConfig = {
+					params: {
+						path: `/profiles/${data?.user.username}`,
+						secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+					},
+				};
+				await revalidateApi.get(`/revalidate`, revalidateConfig);
 			},
 		}
 	);
@@ -335,7 +343,7 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 			username,
 			dehydratedState: dehydrate(queryClient),
 		},
-		revalidate: 60,
+		revalidate: 30, // 30s to revalidate
 	};
 };
 

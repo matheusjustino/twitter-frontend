@@ -4,10 +4,13 @@ import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
+import { revalidateApi } from "@/services/revalidate-api";
+
+// CONTEXTS
+import { useTweet } from "@/contexts/use-tweet.context";
 
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
-import { useTweet } from "@/contexts/use-tweet.context";
 
 async function deletePost({ postId }: { postId: string }) {
 	return await api
@@ -32,6 +35,13 @@ const TweetDeleteModal: React.FC<TweetDeleteModalProps> = ({
 	const mutation = useMutation([`delete-post-${post?._id}`], deletePost, {
 		onSuccess: async () => {
 			setTweets(tweets?.filter((t) => t._id !== post?._id));
+			const revalidateConfig = {
+				params: {
+					path: `/profiles/${session?.user.username}`,
+					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+				},
+			};
+			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 

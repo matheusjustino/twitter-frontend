@@ -15,6 +15,7 @@ import { PostInterface } from "@/interfaces/post.interface";
 // COMPONENTS
 import { TweetReplayModal } from "../tweet-modal-replay";
 import { TweetListItem } from "../tweet-list-item";
+import { revalidateApi } from "@/services/revalidate-api";
 
 async function handleLikeTweet({
 	postId,
@@ -56,18 +57,26 @@ interface TweetsListProps {
 }
 
 const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
-	const { data } = useSession();
+	const { data: session } = useSession();
 	const { tweets } = useTweet();
 	const [postToReply, setPostToReply] = useState<PostInterface>();
 
 	const queryClient = useQueryClient();
 	const likeTweetMutation = useMutation(["like-tweet"], handleLikeTweet, {
-		onSuccess: (data) => {
+		onSuccess: async (data) => {
 			if (data && tweets) {
 				const oldTweetId = tweets.findIndex(
 					(v: PostInterface) => v._id === data._id
 				);
 				tweets[oldTweetId].likes = data.likes;
+
+				const revalidateConfig = {
+					params: {
+						path: `/profiles/${session?.user.username}`,
+						secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+					},
+				};
+				await revalidateApi.get(`/revalidate`, revalidateConfig);
 			}
 		},
 	});
@@ -77,6 +86,14 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 				queryKey: ["list-posts"],
 				exact: true,
 			});
+
+			const revalidateConfig = {
+				params: {
+					path: `/profiles/${session?.user.username}`,
+					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+				},
+			};
+			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 
@@ -85,7 +102,7 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 			{posts?.map((post, index) => {
 				// const postedBy = post.postedBy;
 				const isLiked = post.likes.some(
-					(u) => (u as unknown as string) === data?.user.id
+					(u) => (u as unknown as string) === session?.user.id
 				);
 				const hasRetweets = !!post.retweetUsers.length;
 				const isRetweet = !!post?.retweetData?._id;
@@ -114,14 +131,14 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 						handleRetweet={() => {
 							retweetMutation.mutateAsync({
 								postId: post._id ?? post.id,
-								isAuthenticated: !!data?.user,
+								isAuthenticated: !!session?.user,
 							});
 						}}
 						handleLikeTweet={() => {
 							likeTweetMutation.mutateAsync({
 								postId: post._id ?? post.id,
 								isLiked,
-								isAuthenticated: !!data?.user,
+								isAuthenticated: !!session?.user,
 							});
 						}}
 					/>
@@ -130,13 +147,13 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 
 			<TweetReplayModal
 				post={postToReply}
-				session={data}
+				session={session}
 				onClose={() => setPostToReply(undefined)}
 				onRetweet={() => {
 					postToReply
 						? retweetMutation.mutateAsync({
 								postId: postToReply._id ?? postToReply.id,
-								isAuthenticated: !!data?.user,
+								isAuthenticated: !!session?.user,
 						  })
 						: null;
 				}}
@@ -147,9 +164,9 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 								isLiked: postToReply.likes.some(
 									(u) =>
 										(u as unknown as string) ===
-										data?.user.id
+										session?.user.id
 								),
-								isAuthenticated: !!data?.user,
+								isAuthenticated: !!session?.user,
 						  })
 						: null;
 				}}
