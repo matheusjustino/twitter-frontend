@@ -35,6 +35,14 @@ const useNewTweetForm = () => {
 			setTweets(tweets ? [data, ...tweets] : [data]);
 			toast.success(`Post created successfully`);
 			setInputValue("");
+
+			const revalidateConfig = {
+				params: {
+					path: `/profiles`,
+					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+				},
+			};
+			await api.get(`/api/revalidate`, revalidateConfig);
 		},
 	});
 

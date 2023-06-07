@@ -62,6 +62,14 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 				exact: true,
 			});
 			setInputValue("");
+
+			const revalidateConfig = {
+				params: {
+					path: `/profiles`,
+					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
+				},
+			};
+			await api.get(`/api/revalidate`, revalidateConfig);
 		},
 	});
 

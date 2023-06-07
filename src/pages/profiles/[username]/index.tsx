@@ -335,37 +335,8 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 			username,
 			dehydratedState: dehydrate(queryClient),
 		},
+		revalidate: 60,
 	};
 };
-
-// export const getServerSideProps: GetServerSideProps<{
-// 	username: string;
-// }> = async (ctx) => {
-// 	const username = ctx.params?.username as string | undefined;
-// 	if (!username) {
-// 		return {
-// 			redirect: {
-// 				destination: "/",
-// 				permanent: false,
-// 			},
-// 		};
-// 	}
-
-// 	const session = await getSession(ctx);
-// 	const queryClient = new QueryClient();
-// 	await queryClient.prefetchQuery(
-// 		[`get-user-${username}`],
-// 		async () => await fetchUserByUsername(username)
-// 	);
-
-// 	return {
-// 		props: {
-// 			key: username,
-// 			username,
-// 			session,
-// 			dehydratedState: dehydrate(queryClient),
-// 		},
-// 	};
-// };
 
 export default ProfilesPage;
