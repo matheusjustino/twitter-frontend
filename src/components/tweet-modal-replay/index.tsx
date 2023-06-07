@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
+import { revalidateApi } from "@/services/revalidate-api";
 
 // UTILS
 import { updateTextAreaSize } from "@/utils/update-text-area-size";
@@ -65,11 +66,11 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 
 			const revalidateConfig = {
 				params: {
-					path: `/profiles`,
+					path: `/profiles/${session?.user.username}`,
 					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
 				},
 			};
-			await api.get(`/api/revalidate`, revalidateConfig);
+			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 

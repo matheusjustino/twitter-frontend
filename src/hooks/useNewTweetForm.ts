@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useMutation } from "react-query";
 import { toast } from "react-hot-toast";
 
@@ -7,6 +8,7 @@ import { useTweet } from "@/contexts/use-tweet.context";
 
 // SERVICES
 import { api } from "@/services/api";
+import { revalidateApi } from "@/services/revalidate-api";
 
 function updateTextAreaSize(textArea?: HTMLTextAreaElement | null) {
 	if (!textArea) return;
@@ -20,6 +22,7 @@ async function createPost(content: string) {
 }
 
 const useNewTweetForm = () => {
+	const { data: session } = useSession();
 	const { tweets, setTweets } = useTweet();
 	const [inputValue, setInputValue] = useState("");
 	const textAreaRef = useRef<HTMLTextAreaElement>();
@@ -38,11 +41,11 @@ const useNewTweetForm = () => {
 
 			const revalidateConfig = {
 				params: {
-					path: `/profiles`,
+					path: `/profiles/${session?.user.username}`,
 					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
 				},
 			};
-			await api.get(`/api/revalidate`, revalidateConfig);
+			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 
