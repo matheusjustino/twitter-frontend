@@ -44,7 +44,7 @@ const Sidenav = memo(() => {
 				},
 			},
 			{
-				href: "/",
+				href: "/search",
 				icon: ImSearch,
 				iconClasses: {
 					className: "hover:text-[#1da1f2]",

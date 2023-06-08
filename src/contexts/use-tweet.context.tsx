@@ -50,8 +50,7 @@ export const TweetProvider: React.FC<TweetProviderProps> = ({ children }) => {
 	const queryClient = useQueryClient();
 	const tweetQuery = useQuery(
 		["list-posts"],
-		async ({ queryKey }) => {
-			console.log({ queryKey });
+		async () => {
 			return await listPosts({});
 		},
 		{

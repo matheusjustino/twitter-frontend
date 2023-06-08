@@ -250,7 +250,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 								: "text-gray-400 hover:text-blue-400"
 						}`}
 				>
-					Posts
+					Tweets
 				</div>
 				<div
 					onClick={() => {

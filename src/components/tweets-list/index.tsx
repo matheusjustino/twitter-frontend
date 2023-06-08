@@ -102,6 +102,14 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 		},
 	});
 
+	if (!posts?.length) {
+		return (
+			<div className="flex flex-col gap-4 items-center justify-center mt-20">
+				<h1 className="font-bold">No data</h1>
+			</div>
+		);
+	}
+
 	return (
 		<>
 			{posts?.map((post, index) => {
