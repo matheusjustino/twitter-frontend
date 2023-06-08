@@ -6,16 +6,12 @@ import { toast } from "react-hot-toast";
 // SERVICES
 import { api } from "@/services/api";
 
-// CONTEXTS
-import { useTweet } from "@/contexts/use-tweet.context";
-
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
 
 // COMPONENTS
 import { TweetReplayModal } from "../tweet-modal-replay";
 import { TweetListItem } from "../tweet-list-item";
-import { revalidateApi } from "@/services/revalidate-api";
 
 async function handleLikeTweet({
 	postId,
@@ -52,31 +48,41 @@ async function handleRetweet({
 		.then((res) => res.data);
 }
 
+async function handlePinTweet({
+	postId,
+	pinned,
+	isAuthenticated = false,
+}: {
+	postId: string;
+	pinned: boolean;
+	isAuthenticated: boolean;
+}) {
+	if (!isAuthenticated) {
+		toast.error("You are not authenticated");
+		return;
+	}
+
+	return await api
+		.put<PostInterface>(`/posts/${postId}/pin`, { pinned })
+		.then((res) => res.data);
+}
+
 interface TweetsListProps {
 	posts?: PostInterface[];
 }
 
 const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 	const { data: session } = useSession();
-	const { tweets } = useTweet();
 	const [postToReply, setPostToReply] = useState<PostInterface>();
 
 	const queryClient = useQueryClient();
 	const likeTweetMutation = useMutation(["like-tweet"], handleLikeTweet, {
 		onSuccess: async (data) => {
-			if (data && tweets) {
-				const oldTweetId = tweets.findIndex(
+			if (data && posts) {
+				const oldTweetId = posts.findIndex(
 					(v: PostInterface) => v._id === data._id
 				);
-				tweets[oldTweetId].likes = data.likes;
-
-				const revalidateConfig = {
-					params: {
-						path: `/profiles/${session?.user.username}`,
-						secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
-					},
-				};
-				await revalidateApi.get(`/revalidate`, revalidateConfig);
+				posts[oldTweetId] = data;
 			}
 		},
 	});
@@ -86,21 +92,19 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 				queryKey: ["list-posts"],
 				exact: true,
 			});
-
-			const revalidateConfig = {
-				params: {
-					path: `/profiles/${session?.user.username}`,
-					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
-				},
-			};
-			await revalidateApi.get(`/revalidate`, revalidateConfig);
+		},
+	});
+	const pinTweetMutation = useMutation(["pin-tweet"], handlePinTweet, {
+		onSuccess: async () => {
+			await queryClient.prefetchQuery([
+				`get-posts-by-${session?.user.username}`,
+			]);
 		},
 	});
 
 	return (
 		<>
 			{posts?.map((post, index) => {
-				// const postedBy = post.postedBy;
 				const isLiked = post.likes.some(
 					(u) => (u as unknown as string) === session?.user.id
 				);
@@ -138,6 +142,13 @@ const TweetsList: React.FC<TweetsListProps> = memo(({ posts }) => {
 							likeTweetMutation.mutateAsync({
 								postId: post._id ?? post.id,
 								isLiked,
+								isAuthenticated: !!session?.user,
+							});
+						}}
+						handlePinPost={() => {
+							pinTweetMutation.mutate({
+								postId: post._id ?? post.id,
+								pinned: !post.pinned,
 								isAuthenticated: !!session?.user,
 							});
 						}}

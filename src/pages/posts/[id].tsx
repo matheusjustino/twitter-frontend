@@ -1,8 +1,4 @@
-import {
-	GetServerSideProps,
-	InferGetServerSidePropsType,
-	NextPage,
-} from "next";
+import { GetServerSideProps, NextPage } from "next";
 import { getSession } from "next-auth/react";
 import { QueryClient, dehydrate, useQuery } from "react-query";
 

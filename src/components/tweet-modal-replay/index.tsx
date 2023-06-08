@@ -5,7 +5,6 @@ import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
-import { revalidateApi } from "@/services/revalidate-api";
 
 // UTILS
 import { updateTextAreaSize } from "@/utils/update-text-area-size";
@@ -63,14 +62,6 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 				exact: true,
 			});
 			setInputValue("");
-
-			const revalidateConfig = {
-				params: {
-					path: `/profiles/${session?.user.username}`,
-					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
-				},
-			};
-			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 
@@ -123,13 +114,13 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 			} justify-center items-center px-2 z-50`}
 		>
 			<div
-				className={`bg-white rounded w-full md:w-2/3 xl:w-1/3 animate-[fade-in-down_0.4s_ease-in-out]`}
+				className={`bg-white rounded-xl p-4 sm:px-2 w-full md:w-2/3 xl:w-1/3 animate-[fade-in-down_0.4s_ease-in-out]`}
 			>
 				{/** header */}
-				<div className="border-b px-4 py-2">Reply</div>
+				<div className="border-b px-4 py-2 font-bold">Reply Tweet</div>
 
 				{/** post content */}
-				<div className="py-6">{renderTweetModalContent()}</div>
+				<div className="py-10">{renderTweetModalContent()}</div>
 
 				{/** reply content */}
 				<div className="p-3">

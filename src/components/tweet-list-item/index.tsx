@@ -1,9 +1,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaRetweet } from "react-icons/fa";
 import { AiOutlineClose } from "react-icons/ai";
+import { BsPinAngleFill } from "react-icons/bs";
 
 // UTILS
 import { calculateTimeDifference } from "@/utils/datetime-relative";
@@ -28,6 +29,7 @@ interface TweetListItemProps {
 	handleReplayPost?: () => void;
 	handleLikeTweet?: () => void;
 	handleRetweet?: () => void;
+	handlePinPost?: () => void;
 }
 
 const TweetListItem: React.FC<TweetListItemProps> = ({
@@ -41,9 +43,11 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 	handleReplayPost,
 	handleLikeTweet,
 	handleRetweet,
+	handlePinPost,
 }) => {
 	const { push } = useRouter();
 	const { data } = useSession();
+	const pathname = usePathname();
 	const [isDeleteTweetModalOpen, setIsDeleteTweetModalOpen] = useState(false);
 
 	const navigateTo = (event: any, href: string) => {
@@ -55,11 +59,49 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 		}
 	};
 
+	const isProfilePage = pathname.includes("/profiles");
+	const renderPinIcon = (post: PostInterface) => {
+		if (isProfilePage && !isRetweet) {
+			const isOwner = postedBy.username === data?.user.username;
+
+			const pinIcon = (pinned?: boolean) => {
+				return (
+					<BsPinAngleFill
+						onClick={(e) => {
+							e.stopPropagation();
+							if (isOwner) {
+								handlePinPost && handlePinPost();
+							}
+						}}
+						className={`hover:text-white hover:bg-blue-400 p-1 rounded-full ${
+							pinned && "text-blue-400"
+						}`}
+						size={26}
+					/>
+				);
+			};
+
+			if (isOwner) {
+				return pinIcon(post.pinned);
+			} else {
+				if (post.pinned) {
+					return pinIcon(post.pinned);
+				}
+			}
+		}
+
+		return null;
+	};
+
 	return (
 		<>
 			<div
 				onClick={(e: any) => navigateTo(e, `/posts/${post._id}`)}
-				className={`flex flex-col flex-shrink-0 p-2 gap-2 hover:cursor-pointer border-b-2 text-xs sm:lg min-h-[100px] justify-between`}
+				className={`flex flex-col flex-shrink-0 p-2 gap-2 hover:cursor-pointer ${
+					isProfilePage && !isRetweet && post.pinned
+						? "border-b-8 bg-gray-100"
+						: "border-b-2"
+				} text-xs sm:lg min-h-[150px] justify-between`}
 			>
 				{isRetweet && (
 					<div className="pl-[35px] text-[13px] text-gray-500 mb-[5px] z-50">
@@ -98,20 +140,24 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 									</span>
 								</div>
 
-								{data?.user.id === post.postedBy._id && (
-									<AiOutlineClose
-										onClick={(e) => {
-											e.stopPropagation();
-											setIsDeleteTweetModalOpen(true);
-										}}
-										className="hover:text-white hover:bg-red-400 p-1 rounded-full"
-										size={26}
-									/>
-								)}
+								<div className="flex items-center gap-2">
+									{data?.user.id === post.postedBy._id && (
+										<AiOutlineClose
+											onClick={(e) => {
+												e.stopPropagation();
+												setIsDeleteTweetModalOpen(true);
+											}}
+											className="hover:text-white hover:bg-red-400 p-1 rounded-full"
+											size={26}
+										/>
+									)}
+
+									{renderPinIcon(post)}
+								</div>
 							</div>
 
 							{/** reply to */}
-							{post?.replyTo?._id && (
+							{post?.replyTo?.postedBy._id && (
 								<div className="mb-1">
 									Replying to{" "}
 									<Link

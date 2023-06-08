@@ -8,7 +8,6 @@ import { useTweet } from "@/contexts/use-tweet.context";
 
 // SERVICES
 import { api } from "@/services/api";
-import { revalidateApi } from "@/services/revalidate-api";
 
 function updateTextAreaSize(textArea?: HTMLTextAreaElement | null) {
 	if (!textArea) return;
@@ -38,14 +37,6 @@ const useNewTweetForm = () => {
 			setTweets(tweets ? [data, ...tweets] : [data]);
 			toast.success(`Post created successfully`);
 			setInputValue("");
-
-			const revalidateConfig = {
-				params: {
-					path: `/profiles/${session?.user.username}`,
-					secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
-				},
-			};
-			await revalidateApi.get(`/revalidate`, revalidateConfig);
 		},
 	});
 

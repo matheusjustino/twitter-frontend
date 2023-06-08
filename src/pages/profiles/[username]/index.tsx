@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
-import type { GetStaticPaths, GetStaticProps, NextPage } from "next";
-import { useSession } from "next-auth/react";
+import type { GetServerSideProps, NextPage } from "next";
+import { getSession, useSession } from "next-auth/react";
 import {
 	QueryClient,
 	dehydrate,
@@ -14,7 +14,6 @@ import { toast } from "react-hot-toast";
 
 // SERVICES
 import { api } from "@/services/api";
-import { revalidateApi } from "@/services/revalidate-api";
 
 // INTERFACES
 import { UserInterface } from "@/interfaces/user.interface";
@@ -42,16 +41,16 @@ async function fetchUserPosts(filters: { [key: string]: string | boolean }) {
 		.then((res) => res.data);
 }
 
-const TABS = ["Posts", "Replies"] as const;
+const TABS = ["Tweets", "Replies"] as const;
 
 interface ProfilesPageProps {
 	username: string;
 }
 
 const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
-	const { data, status } = useSession();
+	const { data: session, status } = useSession();
 	const [selectedTab, setSelectedTab] =
-		useState<(typeof TABS)[number]>("Posts");
+		useState<(typeof TABS)[number]>("Tweets");
 
 	const queryClient = useQueryClient();
 	const userProfileQuery = useQuery(
@@ -64,10 +63,11 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 			refetchOnWindowFocus: false,
 		}
 	);
-	const userPostsQuery = useQuery(
+	const userTweetsQuery = useQuery(
 		[`get-posts-by-${username}`],
 		async () =>
 			await fetchUserPosts({
+				pinned: true,
 				postedBy: userProfileQuery.data?._id ?? "",
 			}),
 		{
@@ -104,18 +104,11 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 					queryKey: [`get-user-${username}`],
 					exact: true,
 				});
-				const revalidateConfig = {
-					params: {
-						path: `/profiles/${data?.user.username}`,
-						secret: process.env.NEXT_PUBLIC_NEXT_REVALIDATE_TOKEN,
-					},
-				};
-				await revalidateApi.get(`/revalidate`, revalidateConfig);
 			},
 		}
 	);
 	const isFollowing = !!userProfileQuery.data?.followers.find(
-		(u) => (u as unknown as string) === data?.user.id
+		(u) => (u as unknown as string) === session?.user.id
 	);
 
 	const handleFollowUser = async () => {
@@ -148,6 +141,15 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 
 	const activeTabCss = `text-blue-400 border-b-4 border-blue-400`;
 
+	const tweetsLoading =
+		userProfileQuery.isLoading ||
+		userProfileQuery.isRefetching ||
+		userTweetsQuery.isLoading ||
+		userTweetsQuery.isRefetching ||
+		userRepliesQuery.isLoading ||
+		userRepliesQuery.isRefetching ||
+		followMutation.isLoading;
+
 	if (status === "loading") {
 		return (
 			<div className="flex flex-col gap-4 items-center justify-center h-screen">
@@ -174,7 +176,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 
 				{/** profile buttons container */}
 				<div className="flex justify-end p-4 min-h-[66px] gap-4">
-					{data?.user.username !== username && (
+					{session?.user.username !== username && (
 						<>
 							<span
 								className="inline-block border-blue-400 border text-blue-400
@@ -237,10 +239,13 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 			{/** profile tabs container */}
 			<div className="flex flex-shrink-0 border-b-[1px] border-gray-300">
 				<div
-					onClick={() => setSelectedTab("Posts")}
+					onClick={() => {
+						setSelectedTab("Tweets");
+						userTweetsQuery.refetch();
+					}}
 					className={`flex flex-1 justify-center items-center font-bold h-[52px]
 						hover:cursor-pointer hover:bg-blue-100 transition-colors duration-200 ${
-							selectedTab === "Posts"
+							selectedTab === "Tweets"
 								? activeTabCss
 								: "text-gray-400 hover:text-blue-400"
 						}`}
@@ -248,7 +253,10 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 					Posts
 				</div>
 				<div
-					onClick={() => setSelectedTab("Replies")}
+					onClick={() => {
+						setSelectedTab("Replies");
+						userRepliesQuery.refetch();
+					}}
 					className={`flex flex-1 justify-center items-center text-gray-400 font-bold h-[52px]
 					hover:cursor-pointer hover:bg-blue-100 transition-colors duration-200 ${
 						selectedTab === "Replies"
@@ -261,46 +269,29 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 			</div>
 
 			{/** tweets */}
-			<TweetsList
-				posts={
-					selectedTab === "Posts"
-						? userPostsQuery.data
-						: userRepliesQuery.data
-				}
-			/>
+			{tweetsLoading && (
+				<div className="flex flex-col items-center gap-4 justify-center mt-20">
+					<LoadingSpinner />
+					<h1 className="text-lg font-semibold">Loading tweets...</h1>
+				</div>
+			)}
+			{!tweetsLoading && (
+				<TweetsList
+					posts={
+						selectedTab === "Tweets"
+							? userTweetsQuery.data
+							: userRepliesQuery.data
+					}
+				/>
+			)}
 		</>
 	);
 };
 
-export const getStaticPaths: GetStaticPaths = async () => {
-	const config = {
-		params: {
-			limit: 10,
-		},
-	};
-	const usernames = await api
-		.get<UserInterface[]>(`/users`, config)
-		.then((res) =>
-			res.data.map((u) => {
-				return {
-					params: {
-						username: u.username,
-					},
-				};
-			})
-		);
-
-	return {
-		paths: usernames || [],
-		fallback: "blocking",
-	};
-};
-
-export const getStaticProps: GetStaticProps<{ username: string }> = async (
-	ctx
-) => {
+export const getServerSideProps: GetServerSideProps<{
+	username: string;
+}> = async (ctx) => {
 	const username = ctx.params?.username as string | undefined;
-
 	if (!username) {
 		return {
 			redirect: {
@@ -310,8 +301,8 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 		};
 	}
 
+	const session = await getSession(ctx);
 	const queryClient = new QueryClient();
-
 	await queryClient.prefetchQuery(
 		[`get-user-${username}`],
 		async () => await fetchUserByUsername(username)
@@ -324,6 +315,7 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 			[`get-posts-by-${username}`],
 			async () =>
 				await fetchUserPosts({
+					pinned: true,
 					postedBy: user?._id ?? "",
 				})
 		),
@@ -341,9 +333,9 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 		props: {
 			key: username,
 			username,
+			session,
 			dehydratedState: dehydrate(queryClient),
 		},
-		revalidate: 30, // 30s to revalidate
 	};
 };
 
