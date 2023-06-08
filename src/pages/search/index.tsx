@@ -1,8 +1,7 @@
 import { ChangeEvent, useState } from "react";
-import { GetServerSideProps, NextPage } from "next";
+import { NextPage } from "next";
 import Link from "next/link";
-import { Session } from "next-auth";
-import { getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useQuery } from "react-query";
 
 // SERVICES
@@ -22,11 +21,8 @@ import { ProfileImage } from "@/components/profile-image";
 
 const TABS = ["Tweets", "Users"] as const;
 
-interface SearchPageProps {
-	session: Session | null;
-}
-
-const SearchPage: NextPage<SearchPageProps> = ({ session }) => {
+const SearchPage: NextPage = () => {
+	const { data: session, status } = useSession();
 	const [inputValue, setInputValue] = useState<string>("");
 	const [selectedTab, setSelectedTab] =
 		useState<(typeof TABS)[number]>("Tweets");
@@ -104,6 +100,15 @@ const SearchPage: NextPage<SearchPageProps> = ({ session }) => {
 	const searchUsersLoading =
 		searchUsersQuery.isLoading || searchUsersQuery.isRefetching;
 	const activeTabCss = `text-blue-400 border-b-4 border-blue-400`;
+
+	if (status === "loading") {
+		return (
+			<div className="flex flex-col gap-4 items-center justify-center mt-20">
+				<LoadingSpinner />
+				<h1 className="font-bold">Loading page</h1>
+			</div>
+		);
+	}
 
 	return (
 		<>
@@ -247,16 +252,6 @@ const SearchPage: NextPage<SearchPageProps> = ({ session }) => {
 			)}
 		</>
 	);
-};
-
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-	const session = await getSession(ctx);
-
-	return {
-		props: {
-			session,
-		},
-	};
 };
 
 export default SearchPage;
