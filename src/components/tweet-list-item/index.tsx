@@ -186,13 +186,19 @@ const TweetListItem: React.FC<TweetListItemProps> = ({
 								totalLikes={post.likes.length}
 								totalRetweets={post.retweetUsers.length}
 								handleReply={() => {
-									handleReplayPost && handleReplayPost();
+									if (data?.user) {
+										handleReplayPost && handleReplayPost();
+									}
 								}}
 								handleRetweet={() => {
-									handleRetweet && handleRetweet();
+									if (data?.user) {
+										handleRetweet && handleRetweet();
+									}
 								}}
 								handleLike={() => {
-									handleLikeTweet && handleLikeTweet();
+									if (data?.user) {
+										handleLikeTweet && handleLikeTweet();
+									}
 								}}
 							/>
 						)}

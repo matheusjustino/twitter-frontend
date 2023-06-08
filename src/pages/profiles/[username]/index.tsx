@@ -112,6 +112,8 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 	);
 
 	const handleFollowUser = async () => {
+		if (!session?.user) return;
+
 		try {
 			await followMutation.mutateAsync({
 				userId: userProfileQuery.data?._id ?? "",
@@ -187,7 +189,11 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 							</span>
 
 							<button
-								onClick={handleFollowUser}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									handleFollowUser();
+								}}
 								className={`inline-block border-blue-400 border font-bold
 									py-1 px-4 rounded-[60px] hover:cursor-pointer transition-colors duration-200
 									${
