@@ -51,7 +51,7 @@ const Sidenav = memo(() => {
 				},
 			},
 			{
-				href: "/",
+				href: "/notifications",
 				icon: IoNotificationsSharp,
 				iconClasses: {
 					className: "hover:text-[#1da1f2]",
