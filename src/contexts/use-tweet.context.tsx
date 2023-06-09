@@ -1,10 +1,16 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "react-query";
+import {
+	FetchNextPageOptions,
+	InfiniteData,
+	InfiniteQueryObserverResult,
+	useInfiniteQuery,
+	useQueryClient,
+} from "react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
 
-// SERVICES
-import { api } from "@/services/api";
+// UTILS
+import { getTweets } from "@/utils/get-tweets";
 
 // STORES
 import { useTweetStore } from "@/stores/useTweetStore";
@@ -17,6 +23,10 @@ interface TweetContextData {
 	loading: boolean;
 	setTweets: (data?: PostInterface[]) => void;
 	fetchTweets: (type?: "Recent" | "Following") => Promise<void>;
+	fetchNextPage: (
+		options?: FetchNextPageOptions | undefined
+	) => Promise<InfiniteQueryObserverResult<PostInterface[], any>>;
+	hasNextPage?: boolean;
 }
 
 export const TweetContext = createContext<TweetContextData>(
@@ -27,37 +37,32 @@ interface TweetProviderProps {
 	children: React.ReactNode;
 }
 
-async function listPosts({ userId }: { userId?: string }) {
-	const config = userId
-		? {
-				params: {
-					filters: {
-						userId,
-					},
-				},
-		  }
-		: {};
-	return await api
-		.get<PostInterface[]>(`/posts`, config)
-		.then((res) => res.data);
-}
-
 export const TweetProvider: React.FC<TweetProviderProps> = ({ children }) => {
 	const { data } = useSession();
 	const { tweets, setTweets } = useTweetStore();
 	const [loading, setLoading] = useState(false);
 
 	const queryClient = useQueryClient();
-	const tweetQuery = useQuery(
-		["list-posts"],
-		async () => {
-			return await listPosts({});
+	const {
+		isLoading,
+		isFetchingNextPage,
+		fetchNextPage,
+		hasNextPage,
+		refetch,
+	} = useInfiniteQuery(
+		["infinite-list-tweets"],
+		async ({ pageParam = 0 }) => {
+			return getTweets({ skip: pageParam });
 		},
 		{
 			refetchOnMount: false,
 			refetchOnWindowFocus: false,
-			onSuccess: (data) => {
-				setTweets(data);
+			staleTime: Infinity,
+			getNextPageParam: (lastPage, allPages) => {
+				return lastPage.length ? allPages.length + 1 : undefined;
+			},
+			onSuccess: (result) => {
+				setTweets(result.pages.flat());
 			},
 			onError: (error: any) => {
 				console.error(error);
@@ -69,16 +74,16 @@ export const TweetProvider: React.FC<TweetProviderProps> = ({ children }) => {
 
 	useEffect(() => {
 		if (!tweets) {
-			const prefetchedTweets = queryClient.getQueryData<PostInterface[]>([
-				"list-posts",
-			]);
+			const prefetchedTweets = queryClient.getQueryData<
+				InfiniteData<PostInterface[]>
+			>(["infinite-list-tweets"]);
 			if (prefetchedTweets) {
-				setTweets(prefetchedTweets);
+				setTweets(prefetchedTweets?.pages?.flat() ?? []);
 			} else {
-				tweetQuery.refetch();
+				refetch();
 			}
 		}
-	}, [queryClient, tweets, setTweets, tweetQuery]);
+	}, [queryClient, tweets, setTweets, refetch]);
 
 	const handleSetTweets = (data?: PostInterface[]) => {
 		setTweets(data);
@@ -87,16 +92,16 @@ export const TweetProvider: React.FC<TweetProviderProps> = ({ children }) => {
 	async function handleFetchTweets(type?: "Recent" | "Following") {
 		try {
 			setLoading(true);
-			const newTweets = await queryClient.fetchQuery(
-				["list-posts", type],
+			const newTweets = await queryClient.fetchInfiniteQuery(
+				["infinite-list-tweets", type],
 				async ({ queryKey }) =>
-					await listPosts(
-						queryKey[1] === "Following"
-							? { userId: data?.user.id }
-							: {}
-					)
+					getTweets({
+						...(queryKey[1] === "Following" && {
+							filters: { userId: data?.user.id },
+						}),
+					})
 			);
-			setTweets(newTweets);
+			setTweets(newTweets.pages.flat());
 		} catch (error: any) {
 			console.error(error);
 			const errorMsg = error.response?.data?.error || error.message;
@@ -109,8 +114,10 @@ export const TweetProvider: React.FC<TweetProviderProps> = ({ children }) => {
 	const tweetProviderData: TweetContextData = {
 		tweets,
 		setTweets: handleSetTweets,
-		loading: tweetQuery.isLoading || tweetQuery.isRefetching || loading,
+		loading: isLoading || isFetchingNextPage || loading,
 		fetchTweets: handleFetchTweets,
+		fetchNextPage,
+		hasNextPage,
 	};
 
 	return (

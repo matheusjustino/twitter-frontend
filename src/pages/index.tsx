@@ -3,8 +3,8 @@ import { Session } from "next-auth";
 import { getSession } from "next-auth/react";
 import { QueryClient, dehydrate } from "react-query";
 
-// SERVICES
-import { api } from "@/services/api";
+// UTILS
+import { getTweets } from "@/utils/get-tweets";
 
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
@@ -15,30 +15,6 @@ import { useHomePage } from "@/hooks/useHomePage";
 // COMPONENTS
 import { NewTweetForm } from "@/components/new-tweet-form";
 import { TweetsList } from "@/components/tweets-list";
-import { LoadingSpinner } from "@/components/loading-spinner";
-
-async function listPosts({
-	onlyFollowing,
-	userId,
-}: {
-	onlyFollowing?: boolean;
-	userId?: string;
-}) {
-	const config =
-		onlyFollowing && userId
-			? {
-					params: {
-						filters: {
-							onlyFollowing,
-							userId,
-						},
-					},
-			  }
-			: {};
-	return await api
-		.get<PostInterface[]>(`/posts`, config)
-		.then((res) => res.data);
-}
 
 interface HomePageProps {
 	session: Session | null;
@@ -47,8 +23,8 @@ interface HomePageProps {
 
 const TABS = ["Recent", "Following"] as const;
 
-const HomePage: NextPage<HomePageProps> = ({ session, initialData }) => {
-	const { tweets, selectedTab, loading, setSelectedTab } = useHomePage();
+const HomePage: NextPage<HomePageProps> = ({ session }) => {
+	const { tweets, selectedTab, setSelectedTab } = useHomePage();
 
 	return (
 		<>
@@ -73,31 +49,32 @@ const HomePage: NextPage<HomePageProps> = ({ session, initialData }) => {
 
 			<NewTweetForm session={session} />
 
-			{loading && (
-				<div className="flex flex-col items-center justify-around gap-2 mt-28">
-					<LoadingSpinner />
-					<h1 className="text-lg font-semibold">Loading tweets...</h1>
-				</div>
-			)}
-			{!loading && <TweetsList posts={tweets} />}
+			<TweetsList posts={tweets} />
 		</>
 	);
 };
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
 	const queryClient = new QueryClient();
-	await queryClient.prefetchQuery<PostInterface[]>(["list-posts"], () =>
-		listPosts({ onlyFollowing: false })
+
+	await queryClient.prefetchInfiniteQuery<PostInterface[]>(
+		["infinite-list-tweets"],
+		() => getTweets({})
 	);
+
+	const infiniteQueryData = queryClient.getQueryData<PostInterface[]>([
+		"infinite-list-tweets",
+	]);
+	queryClient.setQueryData(["infinite-list-tweets"], {
+		...infiniteQueryData,
+		pageParams: [null],
+	});
 
 	return {
 		props: {
 			session: await getSession({
 				ctx,
 			}),
-			initialData: queryClient.getQueryData<PostInterface[]>([
-				"list-posts",
-			]),
 			dehydratedState: dehydrate(queryClient),
 		},
 	};

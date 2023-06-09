@@ -3,8 +3,10 @@ import Link from "next/link";
 import type { GetServerSideProps, NextPage } from "next";
 import { getSession, useSession } from "next-auth/react";
 import {
+	InfiniteData,
 	QueryClient,
 	dehydrate,
+	useInfiniteQuery,
 	useMutation,
 	useQuery,
 	useQueryClient,
@@ -15,12 +17,15 @@ import { toast } from "react-hot-toast";
 // SERVICES
 import { api } from "@/services/api";
 
+// UTILS
+import { getTweets } from "@/utils/get-tweets";
+
 // INTERFACES
 import { UserInterface } from "@/interfaces/user.interface";
+import { PostInterface } from "@/interfaces/post.interface";
 
 // COMPONENTS
 import { ProfileImage } from "@/components/profile-image";
-import { PostInterface } from "@/interfaces/post.interface";
 import { TweetsList } from "@/components/tweets-list";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
@@ -30,24 +35,19 @@ async function fetchUserByUsername(username: string) {
 		.then((res) => res.data);
 }
 
-async function fetchUserPosts(filters: { [key: string]: string | boolean }) {
-	const config = {
-		params: {
-			filters,
-		},
-	};
-	return await api
-		.get<PostInterface[]>(`/posts`, config)
-		.then((res) => res.data);
-}
-
 const TABS = ["Tweets", "Replies"] as const;
 
 interface ProfilesPageProps {
 	username: string;
+	initialUserTweets?: InfiniteData<PostInterface[]>;
+	initialUserReplies?: InfiniteData<PostInterface[]>;
 }
 
-const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
+const ProfilesPage: NextPage<ProfilesPageProps> = ({
+	username,
+	initialUserTweets,
+	initialUserReplies,
+}) => {
 	const { data: session, status } = useSession();
 	const [selectedTab, setSelectedTab] =
 		useState<(typeof TABS)[number]>("Tweets");
@@ -63,32 +63,55 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 			refetchOnWindowFocus: false,
 		}
 	);
-	const userTweetsQuery = useQuery(
-		[`get-posts-by-${username}`],
-		async () =>
-			await fetchUserPosts({
-				pinned: true,
-				postedBy: userProfileQuery.data?._id ?? "",
-			}),
+	const userTweetsQuery = useInfiniteQuery(
+		[`get-infinite-tweets-by-${username}`],
+		async ({ pageParam = 0 }) => {
+			return getTweets({
+				skip: pageParam,
+				filters: {
+					pinned: true,
+					postedBy: userProfileQuery.data?._id ?? "",
+				},
+			});
+		},
 		{
-			retry: 2,
-			enabled: false,
+			initialData: initialUserTweets,
 			refetchOnMount: false,
 			refetchOnWindowFocus: false,
+			staleTime: Infinity,
+			getNextPageParam: (lastPage, allPages) => {
+				return lastPage.length ? allPages.length + 1 : undefined;
+			},
+			onError: (error: any) => {
+				console.error(error);
+				const errorMsg = error.response?.data?.error || error.message;
+				toast.error(errorMsg);
+			},
 		}
 	);
-	const userRepliesQuery = useQuery(
-		[`get-retweets-by-${username}`],
+
+	const userRepliesQuery = useInfiniteQuery(
+		[`get-infinite-replies-by-${username}`],
 		async () =>
-			await fetchUserPosts({
-				postedBy: userProfileQuery.data?._id ?? "",
-				isReply: true,
+			getTweets({
+				filters: {
+					isReply: true,
+					postedBy: userProfileQuery.data?._id ?? "",
+				},
 			}),
 		{
-			retry: 2,
-			enabled: false,
+			initialData: initialUserReplies,
 			refetchOnMount: false,
 			refetchOnWindowFocus: false,
+			staleTime: Infinity,
+			getNextPageParam: (lastPage, allPages) => {
+				return lastPage.length ? allPages.length + 1 : undefined;
+			},
+			onError: (error: any) => {
+				console.error(error);
+				const errorMsg = error.response?.data?.error || error.message;
+				toast.error(errorMsg);
+			},
 		}
 	);
 	const followMutation = useMutation(
@@ -146,8 +169,10 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 	const tweetsLoading =
 		userProfileQuery.isLoading ||
 		userProfileQuery.isRefetching ||
+		userTweetsQuery.isFetchingNextPage ||
 		userTweetsQuery.isLoading ||
 		userTweetsQuery.isRefetching ||
+		userRepliesQuery.isFetchingNextPage ||
 		userRepliesQuery.isLoading ||
 		userRepliesQuery.isRefetching ||
 		followMutation.isLoading;
@@ -285,8 +310,8 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({ username }) => {
 				<TweetsList
 					posts={
 						selectedTab === "Tweets"
-							? userTweetsQuery.data
-							: userRepliesQuery.data
+							? userTweetsQuery.data?.pages?.flat()
+							: userRepliesQuery.data?.pages?.flat()
 					}
 				/>
 			)}
@@ -317,29 +342,52 @@ export const getServerSideProps: GetServerSideProps<{
 		`get-user-${username}`,
 	]);
 	await Promise.all([
-		queryClient.prefetchQuery(
-			[`get-posts-by-${username}`],
+		queryClient.prefetchInfiniteQuery(
+			[`get-infinite-tweets-by-${username}`],
 			async () =>
-				await fetchUserPosts({
-					pinned: true,
-					postedBy: user?._id ?? "",
+				getTweets({
+					filters: {
+						pinned: true,
+						postedBy: user?._id ?? "",
+					},
 				})
 		),
-		queryClient.prefetchQuery(
-			[`get-retweets-by-${username}`],
+		queryClient.prefetchInfiniteQuery(
+			[`get-infinite-replies-by-${username}`],
 			async () =>
-				await fetchUserPosts({
-					postedBy: user?._id ?? "",
-					isReply: true,
+				getTweets({
+					filters: {
+						isReply: true,
+						postedBy: user?._id ?? "",
+					},
 				})
 		),
 	]);
+
+	queryClient.setQueryData([`get-infinite-tweets-by-${username}`], {
+		...queryClient.getQueryData<InfiniteData<PostInterface[]>>([
+			`get-infinite-tweets-by-${username}`,
+		]),
+		pageParams: [null],
+	});
+	queryClient.setQueryData([`get-infinite-replies-by-${username}`], {
+		...queryClient.getQueryData<InfiniteData<PostInterface[]>>([
+			`get-infinite-replies-by-${username}`,
+		]),
+		pageParams: [null],
+	});
 
 	return {
 		props: {
 			key: username,
 			username,
 			session,
+			initialUserTweets: queryClient.getQueryData<
+				InfiniteData<PostInterface[]>
+			>([`get-infinite-tweets-by-${username}`]),
+			initialUserReplies: queryClient.getQueryData<
+				InfiniteData<PostInterface[]>
+			>([`get-infinite-replies-by-${username}`]),
 			dehydratedState: dehydrate(queryClient),
 		},
 	};
