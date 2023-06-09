@@ -12,6 +12,9 @@ import {
 	IoLogOut,
 } from "react-icons/io5";
 
+// CONTEXTS
+import { useNotification } from "@/contexts/notification.context";
+
 // COMPONENTS
 import { NavItem } from "./components/nav-item";
 
@@ -19,12 +22,16 @@ interface NavItemInterface {
 	href?: string;
 	icon: IconType;
 	iconClasses?: SVGAttributes<SVGElement>;
+	badge?: {
+		count: number;
+	};
 	onClick?: () => void;
 	disabled?: boolean;
 }
 
 const Sidenav = memo(() => {
 	const { data } = useSession();
+	const { notificationsNotOpenedCount } = useNotification();
 	const user = data?.user;
 
 	const navItems: NavItemInterface[] = useMemo(
@@ -53,6 +60,9 @@ const Sidenav = memo(() => {
 			{
 				href: "/notifications",
 				icon: IoNotificationsSharp,
+				badge: {
+					count: notificationsNotOpenedCount,
+				},
 				iconClasses: {
 					className: "hover:text-[#1da1f2]",
 				},
@@ -75,7 +85,7 @@ const Sidenav = memo(() => {
 			user
 				? {
 						href: "/",
-						onClick: () => signOut({ redirect: false }),
+						onClick: () => signOut(),
 						icon: IoLogOut,
 						iconClasses: {
 							className: "hover:text-[#1da1f2] text-red-500",
@@ -89,7 +99,7 @@ const Sidenav = memo(() => {
 						},
 				  },
 		],
-		[user]
+		[user, notificationsNotOpenedCount]
 	);
 
 	return (

@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from "react-query/devtools";
 
 // CONTEXTS
 import { TweetProvider } from "@/contexts/use-tweet.context";
+import { NotificationProvider } from "@/contexts/notification.context";
 
 interface AppProviderProps {
 	children: React.ReactNode;
@@ -29,8 +30,10 @@ const AppProvider: React.FC<AppProviderProps> = ({ children, pageProps }) => {
 			<QueryClientProvider client={QC}>
 				<Hydrate state={pageProps.dehydratedState}>
 					<TweetProvider>
-						{children}
-						<ReactQueryDevtools initialIsOpen={false} />
+						<NotificationProvider>
+							{children}
+							<ReactQueryDevtools initialIsOpen={false} />
+						</NotificationProvider>
 					</TweetProvider>
 				</Hydrate>
 			</QueryClientProvider>
