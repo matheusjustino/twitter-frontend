@@ -14,6 +14,7 @@ import { api } from "@/services/api";
 
 // CONTEXTS
 import { useTweet } from "@/contexts/use-tweet.context";
+import { useNotification } from "@/contexts/notification.context";
 
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
@@ -88,6 +89,7 @@ interface TweetsListProps {
 const TweetsList: React.FC<TweetsListProps> = memo(
 	({ posts, fetchNextPage, hasNextPage }) => {
 		const { data: session } = useSession();
+		const { emitNotification } = useNotification();
 		const {
 			fetchNextPage: useTweetFetchNextPage,
 			hasNextPage: useTweetHasNextPage,
@@ -103,14 +105,18 @@ const TweetsList: React.FC<TweetsListProps> = memo(
 					);
 					posts[oldTweetId] = data;
 				}
+				return data;
 			},
 		});
 		const retweetMutation = useMutation(["retweet"], handleRetweet, {
-			onSuccess: async () => {
-				await queryClient.invalidateQueries({
-					queryKey: ["list-posts"],
-					exact: true,
-				});
+			onSuccess: async (data) => {
+				if (data) {
+					await queryClient.invalidateQueries({
+						queryKey: ["list-posts"],
+						exact: true,
+					});
+				}
+				emitNotification(data?.postedBy._id ?? "");
 			},
 		});
 		const pinTweetMutation = useMutation(["pin-tweet"], handlePinTweet, {
@@ -177,11 +183,19 @@ const TweetsList: React.FC<TweetsListProps> = memo(
 									});
 								}}
 								handleLikeTweet={() => {
-									likeTweetMutation.mutateAsync({
-										postId: post._id ?? post.id,
-										isLiked,
-										isAuthenticated: !!session?.user,
-									});
+									likeTweetMutation
+										.mutateAsync({
+											postId: post._id ?? post.id,
+											isLiked,
+											isAuthenticated: !!session?.user,
+										})
+										.then(() => {
+											if (!isLiked) {
+												emitNotification(
+													post?.postedBy._id ?? ""
+												);
+											}
+										});
 								}}
 								handlePinPost={() => {
 									pinTweetMutation.mutate({
@@ -200,25 +214,25 @@ const TweetsList: React.FC<TweetsListProps> = memo(
 					session={session}
 					onClose={() => setPostToReply(undefined)}
 					onRetweet={() => {
-						postToReply
-							? retweetMutation.mutateAsync({
-									postId: postToReply._id ?? postToReply.id,
-									isAuthenticated: !!session?.user,
-							  })
-							: null;
+						if (postToReply) {
+							retweetMutation.mutateAsync({
+								postId: postToReply._id ?? postToReply.id,
+								isAuthenticated: !!session?.user,
+							});
+						}
 					}}
-					onLikeTweet={() => {
-						postToReply
-							? likeTweetMutation.mutateAsync({
-									postId: postToReply._id ?? postToReply.id,
-									isLiked: postToReply.likes.some(
-										(u) =>
-											(u as unknown as string) ===
-											session?.user.id
-									),
-									isAuthenticated: !!session?.user,
-							  })
-							: null;
+					onLikeTweet={async () => {
+						if (postToReply) {
+							await likeTweetMutation.mutateAsync({
+								postId: postToReply._id ?? postToReply.id,
+								isLiked: postToReply.likes.some(
+									(u) =>
+										(u as unknown as string) ===
+										session?.user.id
+								),
+								isAuthenticated: !!session?.user,
+							});
+						}
 					}}
 				/>
 			</>

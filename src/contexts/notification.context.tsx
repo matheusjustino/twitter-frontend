@@ -6,6 +6,7 @@ import {
 	InfiniteQueryObserverResult,
 	useInfiniteQuery,
 	useMutation,
+	useQuery,
 	useQueryClient,
 } from "react-query";
 import { toast } from "react-hot-toast";
@@ -13,11 +14,35 @@ import { toast } from "react-hot-toast";
 // UTILS
 import { getUserNotifications } from "@/utils/get-user-notification";
 
+// ENUMS
+import { NotificationTypeEnum } from "@/enums/notification-type.enum";
+
 // SERVICES
 import { api } from "@/services/api";
 
+// CONTEXTS
+import { useSocket } from "./socket.context";
+
 // INTERFACES
 import { NotificationInterface } from "@/interfaces/notification.interface";
+
+function formatNotificationText(
+	username: string,
+	notificationType: NotificationTypeEnum
+) {
+	let text = username;
+	if (notificationType === NotificationTypeEnum.RETWEET) {
+		text += ` retweeted one of your tweets`;
+	} else if (notificationType === NotificationTypeEnum.REPLY) {
+		text += ` replied to one of your tweets`;
+	} else if (notificationType === NotificationTypeEnum.FOLLOW) {
+		text += ` followed you`;
+	} else if (notificationType === NotificationTypeEnum.LIKE) {
+		text += ` liked one of your tweets`;
+	}
+
+	return text;
+}
 
 interface NotificationContextData {
 	notificationsNotOpenedCount: number;
@@ -30,6 +55,7 @@ interface NotificationContextData {
 	) => Promise<InfiniteQueryObserverResult<NotificationInterface[], unknown>>;
 	openSingleNotification: (notificationId: string, opened: boolean) => void;
 	openAllNotifications: () => void;
+	emitNotification: (userId: string) => void;
 }
 
 export const NotificationsContext = createContext<NotificationContextData>(
@@ -44,10 +70,40 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 	children,
 }) => {
 	const { data: session, status } = useSession();
+	const { socket, connected } = useSocket();
 	const [notifications, setNotifications] =
 		useState<NotificationInterface[]>();
 
 	const queryClient = useQueryClient();
+	const { refetch: fetchLatestNotification } = useQuery({
+		queryKey: [`get-latest-notification-${session?.user.id}`],
+		queryFn: async () => {
+			return await api
+				.get<NotificationInterface>(`/notifications/latest`)
+				.then((res) => res.data);
+		},
+		enabled: false,
+		refetchOnMount: false,
+		refetchOnWindowFocus: false,
+		onSuccess: (data) => {
+			setNotifications((old) => (old ? [data, ...old] : []));
+			toast.success(
+				formatNotificationText(
+					data.userFrom.username,
+					data.notificationType
+				),
+				{
+					position: "top-right",
+					duration: 3000,
+					style: {
+						width: "100%",
+						fontWeight: "bold",
+					},
+				}
+			);
+		},
+	});
+
 	const {
 		hasNextPage,
 		fetchNextPage,
@@ -161,6 +217,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 	});
 
 	useEffect(() => {
+		if (connected) {
+			socket?.on("notification received", async () => {
+				fetchLatestNotification();
+			});
+		}
+	}, [connected, socket, fetchLatestNotification]);
+
+	useEffect(() => {
 		if (status === "authenticated") {
 			if (!notifications) {
 				refetch();
@@ -172,6 +236,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 		if (opened) return;
 
 		openSingleNotification(notificationId);
+	};
+
+	const emitNotification = (userId: string) => {
+		if (userId === session?.user.id) return;
+		socket?.emit("notification received", userId);
 	};
 
 	const [allOpened, notificationsNotOpenedCount] = notifications?.reduce(
@@ -186,10 +255,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 		notifications,
 		allOpened,
 		notificationsNotOpenedCount,
+		hasNextPage,
 		fetchNextPage,
 		openSingleNotification: onSubmit,
 		openAllNotifications: openAllNotification,
-		hasNextPage,
+		emitNotification,
 		loading:
 			isLoading ||
 			isFetching ||

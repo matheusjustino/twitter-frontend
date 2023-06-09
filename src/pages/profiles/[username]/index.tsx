@@ -20,6 +20,9 @@ import { api } from "@/services/api";
 // UTILS
 import { getTweets } from "@/utils/get-tweets";
 
+// CONTEXTS
+import { useNotification } from "@/contexts/notification.context";
+
 // INTERFACES
 import { UserInterface } from "@/interfaces/user.interface";
 import { PostInterface } from "@/interfaces/post.interface";
@@ -49,6 +52,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 	initialUserReplies,
 }) => {
 	const { data: session, status } = useSession();
+	const { emitNotification } = useNotification();
 	const [selectedTab, setSelectedTab] =
 		useState<(typeof TABS)[number]>("Tweets");
 
@@ -141,6 +145,10 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 			await followMutation.mutateAsync({
 				userId: userProfileQuery.data?._id ?? "",
 			});
+
+			if (!isFollowing) {
+				emitNotification(userProfileQuery.data?._id ?? "");
+			}
 		} catch (error: any) {
 			console.error(error);
 			const errorMsg = error.response?.data?.error || error.message;

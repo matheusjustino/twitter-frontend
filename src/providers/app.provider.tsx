@@ -7,6 +7,7 @@ import { ReactQueryDevtools } from "react-query/devtools";
 // CONTEXTS
 import { TweetProvider } from "@/contexts/use-tweet.context";
 import { NotificationProvider } from "@/contexts/notification.context";
+import { SocketProvider } from "@/contexts/socket.context";
 
 interface AppProviderProps {
 	children: React.ReactNode;
@@ -29,12 +30,14 @@ const AppProvider: React.FC<AppProviderProps> = ({ children, pageProps }) => {
 		<SessionProvider session={pageProps.session}>
 			<QueryClientProvider client={QC}>
 				<Hydrate state={pageProps.dehydratedState}>
-					<TweetProvider>
+					<SocketProvider>
 						<NotificationProvider>
-							{children}
-							<ReactQueryDevtools initialIsOpen={false} />
+							<TweetProvider>
+								{children}
+								<ReactQueryDevtools initialIsOpen={false} />
+							</TweetProvider>
 						</NotificationProvider>
-					</TweetProvider>
+					</SocketProvider>
 				</Hydrate>
 			</QueryClientProvider>
 		</SessionProvider>

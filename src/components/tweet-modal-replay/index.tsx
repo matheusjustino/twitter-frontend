@@ -9,6 +9,9 @@ import { api } from "@/services/api";
 // UTILS
 import { updateTextAreaSize } from "@/utils/update-text-area-size";
 
+// CONTEXTS
+import { useNotification } from "@/contexts/notification.context";
+
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
 
@@ -44,6 +47,7 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 	session,
 }) => {
 	const isAuthenticated = !!session;
+	const { emitNotification } = useNotification();
 	const [inputValue, setInputValue] = useState("");
 	const textAreaRef = useRef<HTMLTextAreaElement>();
 	const inputRef = useCallback((textArea: HTMLTextAreaElement) => {
@@ -55,13 +59,15 @@ const TweetReplayModal: React.FC<TweetReplayModalProps> = ({
 	const replayTweetMutation = useMutation({
 		mutationKey: ["reply-tweet"],
 		mutationFn: replayTweet,
-		onSuccess: async () => {
+		onSuccess: async (data) => {
 			toast.success(`Tweet replied successfully`);
 			await queryClient.invalidateQueries({
 				queryKey: ["list-posts"],
 				exact: true,
 			});
 			setInputValue("");
+
+			emitNotification(data?.replyTo?.postedBy._id ?? "");
 		},
 	});
 
