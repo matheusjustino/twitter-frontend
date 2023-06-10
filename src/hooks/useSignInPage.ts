@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
+import { useState } from "react";
 
 const formSchema = z.object({
 	email: z.string().email().nonempty(),
@@ -12,6 +13,7 @@ const formSchema = z.object({
 type FormType = z.infer<typeof formSchema & FieldValues>;
 
 const useSignInPage = () => {
+	const [loading, setLoading] = useState(false);
 	const {
 		handleSubmit,
 		register,
@@ -27,21 +29,26 @@ const useSignInPage = () => {
 
 	const onSubmit: SubmitHandler<FormType> = async (data, event) => {
 		event?.preventDefault();
+		setLoading(true);
 		await signIn("credentials", {
 			...data,
 			redirect: false,
-		}).then(({ ok, error }: any) => {
-			if (ok) {
-				toast.success("Login successful");
-				setTimeout(() => {
-					window.location.replace(
-						process.env.NEXT_PUBLIC_NEXTAUTH_URL as string
-					);
-				}, 750);
-			} else {
-				toast.error(JSON.parse(error).error);
-			}
-		});
+		})
+			.then(({ ok, error }: any) => {
+				if (ok) {
+					toast.success("Login successful");
+					setTimeout(() => {
+						window.location.replace(
+							process.env.NEXT_PUBLIC_NEXTAUTH_URL as string
+						);
+					}, 750);
+				} else {
+					toast.error(JSON.parse(error).error);
+				}
+			})
+			.finally(() => {
+				setLoading(false);
+			});
 	};
 
 	return {
@@ -50,6 +57,7 @@ const useSignInPage = () => {
 		reset,
 		errors,
 		onSubmit,
+		loading,
 	};
 };
 

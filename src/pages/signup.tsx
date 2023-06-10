@@ -1,17 +1,19 @@
+import Link from "next/link";
 import { memo } from "react";
 import { NextPage } from "next";
 import { MdPersonOutline } from "react-icons/md";
+import { AiOutlineLock } from "react-icons/ai";
+import { VscLoading } from "react-icons/vsc";
 
 // HOOKS
 import { useSignUpPage } from "@/hooks/useSignUpPage";
 
 // COMPONENTS
 import { Input } from "@/components/input";
-import { AiOutlineLock } from "react-icons/ai";
-import Link from "next/link";
 
 const SignUpPage: NextPage = memo(() => {
-	const { handleSubmit, register, formErrors, onSubmit } = useSignUpPage();
+	const { handleSubmit, register, formErrors, onSubmit, loading } =
+		useSignUpPage();
 
 	return (
 		<div className="w-full h-screen mx-auto flex">
@@ -54,10 +56,20 @@ const SignUpPage: NextPage = memo(() => {
 
 				<div className="flex flex-col gap-2">
 					<button
+						disabled={loading}
 						type="submit"
-						className="bg-[#1da1f2] px-8 py-2 rounded-md text-white font-semibold hover:opacity-80"
+						className="bg-[#1da1f2] px-8 py-2 rounded-md text-white font-semibold
+							hover:opacity-80 disabled:bg-gray-300 disabled:cursor-not-allowed w-full
+							min-h-[50px]"
 					>
-						Register
+						{loading ? (
+							<VscLoading
+								className="animate-spin mx-auto"
+								size={26}
+							/>
+						) : (
+							"Register"
+						)}
 					</button>
 
 					<Link

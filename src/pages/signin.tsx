@@ -3,6 +3,7 @@ import { NextPage } from "next";
 import Link from "next/link";
 import { AiOutlineLock } from "react-icons/ai";
 import { MdPersonOutline } from "react-icons/md";
+import { VscLoading } from "react-icons/vsc";
 
 // HOOKS
 import { useSignInPage } from "@/hooks/useSignInPage";
@@ -11,7 +12,8 @@ import { useSignInPage } from "@/hooks/useSignInPage";
 import { Input } from "@/components/input";
 
 const SignInPage: NextPage = memo(() => {
-	const { handleSubmit, register, errors, onSubmit } = useSignInPage();
+	const { handleSubmit, register, errors, onSubmit, loading } =
+		useSignInPage();
 
 	return (
 		<div className="w-full h-screen mx-auto flex">
@@ -43,10 +45,20 @@ const SignInPage: NextPage = memo(() => {
 
 				<div className="flex flex-col gap-2">
 					<button
+						disabled={loading}
 						type="submit"
-						className="bg-[#1da1f2] px-8 py-2 rounded-md text-white font-semibold hover:opacity-80"
+						className="bg-[#1da1f2] px-8 py-2 rounded-md text-white font-semibold
+							hover:opacity-80 disabled:bg-gray-300 disabled:cursor-not-allowed w-full
+							min-h-[50px]"
 					>
-						Login
+						{loading ? (
+							<VscLoading
+								className="animate-spin mx-auto"
+								size={26}
+							/>
+						) : (
+							"Login"
+						)}
 					</button>
 
 					<Link
