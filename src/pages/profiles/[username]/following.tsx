@@ -202,6 +202,7 @@ export const getStaticProps: GetStaticProps<{ username: string }> = async (
 				destination: "/",
 				permanent: false,
 			},
+			revalidate: 0,
 		};
 	}
 
