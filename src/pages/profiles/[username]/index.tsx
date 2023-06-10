@@ -31,6 +31,7 @@ import { PostInterface } from "@/interfaces/post.interface";
 import { ProfileImage } from "@/components/profile-image";
 import { TweetsList } from "@/components/tweets-list";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { followUser } from "@/utils/follow-user";
 
 async function fetchUserByUsername(username: string) {
 	return await api
@@ -120,11 +121,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 	);
 	const followMutation = useMutation(
 		[`follow-user-${userProfileQuery.data?._id}`],
-		async ({ userId }: { userId: string }) => {
-			return await api
-				.put<UserInterface>(`/users/${userId}/follow`, undefined)
-				.then((res) => res.data);
-		},
+		followUser,
 		{
 			onSuccess: async () => {
 				await queryClient.invalidateQueries({
@@ -206,7 +203,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 			<div className="pb-2">
 				{/** cover photo container */}
 				<div className="h-[180px] bg-blue-400 relative">
-					<ProfileImage className="!w-[132px] !h-[132px] ml-4 !absolute -bottom-[66px] border-4 border-white" />
+					<ProfileImage className="!w-[100px] !h-[100px] sm:!w-[132px] sm:!h-[132px] ml-4 !absolute -bottom-[53px] border-4 border-white" />
 				</div>
 
 				{/** profile buttons container */}
@@ -215,7 +212,7 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 						<>
 							<span
 								className="inline-block border-blue-400 border text-blue-400
-								hover:text-gray-700 hover:border-blue-400 py-1 px-4 rounded-[60px]
+								hover:text-gray-700 hover:border-blue-400 py-1 px-2 sm:px-4 rounded-[60px]
 								hover:bg-blue-100 hover:cursor-pointer transition-colors duration-200"
 							>
 								<IoMdMail size={24} />
@@ -227,8 +224,8 @@ const ProfilesPage: NextPage<ProfilesPageProps> = ({
 									e.preventDefault();
 									handleFollowUser();
 								}}
-								className={`inline-block border-blue-400 border font-bold
-									py-1 px-4 rounded-[60px] hover:cursor-pointer transition-colors duration-200
+								className={`inline-block border-blue-400 border font-bold text-sm sm:text-base
+									py-1 px-3 sm:px-4 rounded-[60px] hover:cursor-pointer transition-colors duration-200
 									${
 										isFollowing
 											? "bg-blue-400 text-white"

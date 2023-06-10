@@ -117,7 +117,7 @@ const NotificationsPage: NextPage = () => {
 
 						return (
 							<Link
-								key={notification._id}
+								key={notification._id + `${Date.now()}`}
 								href={href}
 								onClick={() =>
 									openSingleNotification(

@@ -68,7 +68,7 @@ const Sidenav = memo(() => {
 				},
 			},
 			{
-				href: "/",
+				href: "/chats",
 				icon: IoMdMail,
 				iconClasses: {
 					className: "hover:text-[#1da1f2]",

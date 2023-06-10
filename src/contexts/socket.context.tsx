@@ -21,11 +21,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	const [connected, setConnected] = useState(false);
 
 	useEffect(() => {
+		const socketIO = io(process.env.NEXT_PUBLIC_SOCKET_IO_URL as string);
 		if (session?.user) {
-			const socketIO = io(
-				process.env.NEXT_PUBLIC_SOCKET_IO_URL as string
-			);
-
 			socketIO.emit("setup", session?.user);
 
 			socketIO.on("connection", () => {
@@ -44,11 +41,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 					`User ${session?.user?.id} disconnected from server`
 				);
 			});
-
-			return () => {
-				socketIO.disconnect();
-			};
 		}
+		return () => {
+			socketIO.disconnect();
+		};
 	}, [session?.user]);
 
 	const socketContextData: SocketContextData = {

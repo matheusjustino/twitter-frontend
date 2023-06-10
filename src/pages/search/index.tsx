@@ -1,14 +1,17 @@
 import { ChangeEvent, useState } from "react";
 import { NextPage } from "next";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useQuery } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "react-query";
 
 // SERVICES
 import { api } from "@/services/api";
 
 // HOOKS
 import { useDebounce } from "@/hooks/use-debounce";
+
+// UTILS
+import { followUser } from "@/utils/follow-user";
+import { updateSearchedUsers } from "@/utils/update-search-user-query-data";
 
 // INTERFACES
 import { PostInterface } from "@/interfaces/post.interface";
@@ -17,7 +20,7 @@ import { UserInterface } from "@/interfaces/user.interface";
 // COMPONENTS
 import { TweetsList } from "@/components/tweets-list";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { ProfileImage } from "@/components/profile-image";
+import { UserListItem } from "@/components/user-list-item";
 
 const TABS = ["Tweets", "Users"] as const;
 
@@ -27,6 +30,7 @@ const SearchPage: NextPage = () => {
 	const [selectedTab, setSelectedTab] =
 		useState<(typeof TABS)[number]>("Tweets");
 
+	const queryClient = useQueryClient();
 	const { refetch: refetchSearchTweets, ...searchTweetsQuery } = useQuery(
 		[`search-tweets`],
 		async () => {
@@ -50,7 +54,11 @@ const SearchPage: NextPage = () => {
 			refetchOnWindowFocus: false,
 		}
 	);
-	const { refetch: refetchSearchUsers, ...searchUsersQuery } = useQuery(
+	const {
+		data: searchUsersData,
+		refetch: refetchSearchUsers,
+		...searchUsersQuery
+	} = useQuery(
 		[`search-users`],
 		async () => {
 			const config = {
@@ -67,10 +75,15 @@ const SearchPage: NextPage = () => {
 			onSuccess: () => {
 				setInputValue("");
 			},
-			enabled: false,
+			initialData: [],
 			refetchOnMount: false,
 			refetchOnWindowFocus: false,
 		}
+	);
+
+	const followMutation = useMutation(
+		[`follow-user-${session?.user.id}`],
+		followUser
 	);
 
 	const debouncedSearchTweets = useDebounce({
@@ -190,15 +203,15 @@ const SearchPage: NextPage = () => {
 
 					{!searchUsersLoading && (
 						<>
-							{searchUsersQuery?.data?.length === 0 && (
+							{searchUsersData?.length === 0 && (
 								<div className="flex flex-col gap-4 items-center justify-center mt-20">
 									<h1 className="font-bold">No data</h1>
 								</div>
 							)}
 
-							{searchUsersQuery?.data &&
-								searchUsersQuery?.data?.length > 0 &&
-								searchUsersQuery?.data?.map((u) => {
+							{searchUsersData &&
+								searchUsersData?.length > 0 &&
+								searchUsersData?.map((u) => {
 									const isFollowing = u.followers.some(
 										(f) =>
 											(f as unknown as string) ===
@@ -206,45 +219,33 @@ const SearchPage: NextPage = () => {
 									);
 
 									return (
-										<div key={u._id}>
-											<div className="flex items-start justify-between p-4">
-												<div className="flex items-start gap-4">
-													<ProfileImage />
-
-													<div className="flex gap-2">
-														<Link
-															href={`/profiles/${u.username}`}
-															className="font-bold hover:underline"
-														>
-															{u.username}
-														</Link>
-														<span className="text-gray-500">{`@${u.username
-															.split(" ")
-															.join("")
-															.toLowerCase()}`}</span>
-													</div>
-												</div>
-
-												{u.id !== session?.user.id && (
-													<div className="flex justify-end p-4 min-h-[66px] gap-4">
-														<button
-															onClick={() => {}}
-															className={`inline-block border-blue-400 border font-bold
-														py-1 px-4 rounded-[60px] hover:cursor-pointer transition-colors duration-200
-														${
-															isFollowing
-																? "bg-blue-400 text-white"
-																: "hover:bg-blue-100 text-blue-400 hover:text-gray-700 hover:border-blue-400"
-														}`}
-														>
-															{isFollowing
-																? "Following"
-																: "Follow"}
-														</button>
-													</div>
-												)}
-											</div>
-										</div>
+										<UserListItem
+											key={u._id}
+											session={session}
+											user={u}
+											isFollowing={isFollowing}
+											handleFollow={() => {
+												followMutation
+													.mutateAsync({
+														userId: u._id ?? "",
+													})
+													.then((res) => {
+														updateSearchedUsers({
+															queryClient,
+															updatedLoggedUser:
+																res,
+															selectedUserId:
+																u._id ?? "",
+															action: isFollowing
+																? "Unfollow"
+																: "Follow",
+															queryKeys: [
+																`search-users`,
+															],
+														});
+													});
+											}}
+										/>
 									);
 								})}
 						</>
