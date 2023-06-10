@@ -273,11 +273,6 @@ const ChatPage: NextPage<ChatPageProps> = ({
 				</main>
 			)}
 
-			{/* <ChatUsersModal
-				isVisible={showChatUsersModal}
-				onClose={() => setShowChatUsersModal(false)}
-				chatUsers={chatUsers.map((u) => u.username)}
-			/> */}
 			{currentChat && (
 				<UpdateChatNameModal
 					currentChat={currentChat}
