@@ -57,6 +57,8 @@ const NewChatPage: NextPage<NewChatPageProps> = ({ session }) => {
 	);
 
 	const handleCreateChat = () => {
+		if (!selectedUsers.length) return;
+
 		createChat({
 			users: selectedUsers.map((v) => v.value),
 		}).then(() => {
@@ -212,7 +214,9 @@ const NewChatPage: NextPage<NewChatPageProps> = ({ session }) => {
 						rounded-[40px] disabled:bg-gray-300 disabled:text-gray-700
 						disabled:cursor-not-allowed min-w-[126px] min-h-[40px]"
 					type="button"
-					disabled={useSearchUserLoading || loading}
+					disabled={
+						useSearchUserLoading || loading || !selectedUsers.length
+					}
 				>
 					{loading ? (
 						<VscLoading
