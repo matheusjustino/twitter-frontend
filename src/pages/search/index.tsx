@@ -190,13 +190,14 @@ const SearchPage: NextPage = () => {
 
 					{!searchUsersLoading && (
 						<>
-							{!searchUsersQuery?.data?.length && (
+							{searchUsersQuery?.data?.length === 0 && (
 								<div className="flex flex-col gap-4 items-center justify-center mt-20">
 									<h1 className="font-bold">No data</h1>
 								</div>
 							)}
 
-							{searchUsersQuery?.data?.length &&
+							{searchUsersQuery?.data &&
+								searchUsersQuery?.data?.length > 0 &&
 								searchUsersQuery?.data?.map((u) => {
 									const isFollowing = u.followers.some(
 										(f) =>
