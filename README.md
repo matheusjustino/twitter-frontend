@@ -2,7 +2,9 @@
 
 ## Application
 
-    The application allows account creation, creation of tweets, likes, replies and retweets. It's also possible to follow other users, view only tweets from those you are following, real time chat and real time notifications.
+    The application allows account creation, creation of tweets, likes, replies and retweets.
+    It's also possible to follow other users, view only tweets from those you are following,
+    real time chat and real time notifications.
 
 ## Technologies
 
