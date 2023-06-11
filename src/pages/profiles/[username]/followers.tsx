@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GetStaticPaths, GetStaticProps, NextPage } from "next";
+import { GetServerSideProps, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import { QueryClient, dehydrate, useMutation, useQuery } from "react-query";
 import { toast } from "react-hot-toast";
@@ -165,35 +165,8 @@ const FollowersPage: NextPage<FollowersPageProps> = ({ username }) => {
 	);
 };
 
-export const getStaticPaths: GetStaticPaths = async () => {
-	const config = {
-		params: {
-			limit: 10,
-		},
-	};
-	const usernames = await api
-		.get<UserInterface[]>(`/users`, config)
-		.then((res) =>
-			res.data.map((u) => {
-				return {
-					params: {
-						username: u.username,
-					},
-				};
-			})
-		);
-
-	return {
-		paths: usernames || [],
-		fallback: "blocking",
-	};
-};
-
-export const getStaticProps: GetStaticProps<{ username: string }> = async (
-	ctx
-) => {
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
 	const username = ctx.params?.username as string | undefined;
-
 	if (!username) {
 		return {
 			redirect: {
